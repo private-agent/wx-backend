@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  main:
+    build: .
+    container_name: wx-backend
+    restart: unless-stopped
+    ports:
+      - "5080:80"
+    volumes:
+      - ./logs:/app/logs  # 挂载日志目录
+    environment:
+      # WeChat配置
+      - WECHAT_TOKEN=${WECHAT_TOKEN}
+      - WECHAT_AES_KEY=${WECHAT_AES_KEY}
+      - WECHAT_APPID=${WECHAT_APPID}
+      
+      # 日志配置
+      - LOG_LEVEL=DEBUG  # 临时设置为DEBUG级别
+      - LOG_DIR=/app/logs  # 容器内日志目录
+      - LOG_FILE_SIZE=${LOG_FILE_SIZE:-50M}  # 单个日志文件大小限制
+      - LOG_BACKUP_COUNT=${LOG_BACKUP_COUNT:-5}  # 日志文件备份数量
+    networks:
+      - wx-network
+
+networks:
+  wx-network:
+    driver: bridge 
