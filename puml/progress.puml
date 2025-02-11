@@ -1,0 +1,108 @@
+@startuml progress
+!pragma layout smetana
+skinparam backgroundColor #F5F5F5
+
+start
+
+partition "1. 请求验证" {
+    :微信服务器发送请求;
+    if (请求方法?) then (GET)
+        :验证签名;
+        if (验证成功?) then (是)
+            :返回echostr;
+            stop
+        else (否)
+            :返回403错误;
+            stop
+        endif
+    else (POST)
+        :验证签名;
+        if (验证失败) then (是)
+            :返回403错误;
+            stop
+        endif
+    endif
+}
+
+partition "2. 消息解析" {
+    :接收原始数据;
+    :解析XML;
+    if (解析成功?) then (是)
+        if (加密模式?) then (是)
+            :提取加密内容;
+            :消息解密;
+            if (解密失败) then (是)
+                :记录解密错误;
+                :返回success;
+                stop
+            endif
+        endif
+        :解析消息内容;
+    else (否)
+        :记录解析错误;
+        :返回success;
+        stop
+    endif
+}
+
+partition "3. Token管理" {
+    :检查access_token;
+    if (token有效?) then (否)
+        :刷新access_token;
+        if (刷新失败?) then (是)
+            :记录token错误;
+            :返回服务异常消息;
+            stop
+        endif
+    endif
+}
+
+partition "4. 服务适配" {
+    :获取服务类型;
+    switch (EXTERNAL_SERVICE_TYPE)
+    case (openai)
+        :构造OpenAI请求;
+    case (ollama)
+        :构造Ollama请求;
+    case (custom)
+        :构造自定义请求;
+    case (default)
+        :构造默认请求;
+    endswitch
+}
+
+partition "5. 异步处理" {
+    :创建异步任务;
+    fork
+        :发送请求到外部服务;
+        if (请求成功?) then (是)
+            :解析服务响应;
+            :构造客服消息;
+            :异步推送回复;
+        else (否)
+            :记录服务错误;
+            :发送错误提示;
+        endif
+    fork again
+        :返回即时响应;
+        :返回success;
+    end fork
+}
+
+partition "日志记录" {
+    fork
+        :记录请求信息;
+    fork again
+        :记录解析结果;
+    fork again
+        :记录Token状态;
+    fork again
+        :记录服务调用;
+    fork again
+        :记录响应结果;
+    end fork
+}
+
+stop
+
+@enduml

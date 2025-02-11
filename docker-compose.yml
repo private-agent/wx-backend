@@ -8,21 +8,32 @@ services:
     ports:
       - "5080:80"
     volumes:
-      - ./logs:/app/logs  # 挂载日志目录
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - type: bind
+        source: ./logs
+        target: /app/logs
+        read_only: false
     environment:
       # WeChat配置
       - WECHAT_TOKEN=${WECHAT_TOKEN}
       - WECHAT_AES_KEY=${WECHAT_AES_KEY}
       - WECHAT_APPID=${WECHAT_APPID}
-      
+      - WECHAT_APPSECRET=${WECHAT_APPSECRET}
+      - EXTERNAL_SERVICE_URL=${EXTERNAL_SERVICE_URL}
+      - EXTERNAL_SERVICE_TIMEOUT=${EXTERNAL_SERVICE_TIMEOUT}
+      - EXTERNAL_SERVICE_TYPE=${EXTERNAL_SERVICE_TYPE}
+
       # 日志配置
       - LOG_LEVEL=DEBUG  # 临时设置为DEBUG级别
       - LOG_DIR=/app/logs  # 容器内日志目录
       - LOG_FILE_SIZE=${LOG_FILE_SIZE:-50M}  # 单个日志文件大小限制
       - LOG_BACKUP_COUNT=${LOG_BACKUP_COUNT:-5}  # 日志文件备份数量
+      - TOKEN_FILE_PATH=/app/data/access_token.json  # 配置文件路径
     networks:
       - wx-network
+    user: root  # 临时使用root用户运行
 
 networks:
   wx-network:
-    driver: bridge 
+    driver: bridge

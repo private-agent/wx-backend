@@ -29,4 +29,10 @@ RUN cp app/config.example.py app/config.py
 EXPOSE 80
 
 # 启动命令
-CMD ["python", "run.py"] 
+CMD ["python", "run.py"]
+
+# 新增Dockerfile指令
+RUN mkdir -p /app/data && \
+    chmod 700 /app/data && \
+    chown nobody:nogroup /app/data
+USER nobody
