@@ -145,11 +145,16 @@ def openai_request_mapper(wechat_msg: Dict) -> Dict:
 
 def openai_response_mapper(external_resp: Dict) -> Dict:
     """将OpenAI响应转换为微信回复格式"""
-
     try:
         return {
             "msg_type": "text",
-            "content": external_resp.choices[0].message.content
+            "content": external_resp['choices'][0]['message']['content']
+        }
+    except KeyError as e:
+        logger.error(f"OpenAI响应格式错误，缺少关键字段: {str(e)}")
+        return {
+            "msg_type": "text",
+            "content": "OpenAI 响应错误，请联系管理员"
         }
     except Exception as e:
         logger.error(f"OpenAI response mapping failed: {str(e)}")

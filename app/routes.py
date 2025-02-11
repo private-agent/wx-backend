@@ -23,64 +23,57 @@ def init_routes(app):
 
     @app.route('/wechat', methods=['GET', 'POST'])
     def wechat():
-        # 验证签名
+        # 公共参数获取
+        signature = request.args.get('signature', '')
+        timestamp = request.args.get('timestamp', '')
+        nonce = request.args.get('nonce', '')
+        msg_signature = request.args.get('msg_signature', '')
+        encrypt_type = request.args.get('encrypt_type', 'raw')  # 新增加密类型判断
+
+        # 验证签名逻辑
         if request.method == 'GET':
-            signature = request.args.get('signature', '')
-            timestamp = request.args.get('timestamp', '')
-            nonce = request.args.get('nonce', '')
-            echostr = request.args.get('echostr', '')
+            echo_str = request.args.get('echostr', '')
+            if crypto.check_signature(signature, timestamp, nonce, echo_str):
+                return echo_str
+            return 'Verification failed', 403
 
-            logger.info(f'Receiving verification request: signature={signature}, timestamp={timestamp}, nonce={nonce}')
-
-            if crypto.check_signature(signature, timestamp, nonce):
-                logger.info('Signature verification successful')
-                return echostr
-            logger.warning('Signature verification failed')
-            return 'Verification Failed', 403
-
-        # 处理消息
+        # 处理POST消息
         try:
-            encrypted_xml = request.data
-            logger.debug(f'Raw request data (str): {encrypted_xml}')
-            logger.debug(f'Raw request data (hex): {encrypted_xml.hex() if isinstance(encrypted_xml, bytes) else None}')
+            # 根据加密类型处理消息
+            xml_str = request.data
+            logger.debug(f'Raw request data (str): {xml_str}')
+            logger.debug(f'Raw request data (hex): {xml_str.hex()}')
 
-            # 检查是否为加密消息
-            if not encrypted_xml:
-                logger.error('Empty request data')
-                return 'Empty Request', 400
-
-            # 解析XML获取加密内容
-            try:
-                from xml.etree import ElementTree as ET
-                xml_tree = ET.fromstring(encrypted_xml)
-                encrypt_elem = xml_tree.find('Encrypt')
-                if encrypt_elem is None:
-                    logger.error('No Encrypt field in XML')
-                    return 'Invalid Format', 400
-                encrypted_msg = encrypt_elem.text
-                logger.debug(f'Extracted encrypted message: {encrypted_msg}')
-            except ET.ParseError as e:
-                logger.error(f'Failed to parse XML: {str(e)}')
-                return 'Invalid XML', 400
-
-            # 解密消息
-            decrypted_xml = crypto.decrypt_message(encrypted_msg)
-            logger.debug(f'Decrypted XML: {decrypted_xml}')
-
-            # 解析消息内容
-            msg = MessageHandler.parse_message(decrypted_xml)
-            logger.info(f'Parsed message: type={msg.get("MsgType")}, from={msg.get("FromUserName")}')
+            # 判断消息模式
+            is_encrypted = 'encrypt_type' in request.args or 'aes' in request.args.values()
+            if is_encrypted:
+                # 加密消息处理
+                decrypted_xml = crypto.decrypt_message(
+                    xml_str,
+                    msg_signature,
+                    timestamp,
+                    nonce
+                )
+                msg = MessageHandler.parse_message(decrypted_xml)
+            else:
+                # 明文消息处理
+                msg = MessageHandler.parse_message(xml_str)
 
             # 检查access_token状态
             if not app.token_manager.access_token:
                 error_msg = f"系统服务暂时不可用，请稍后再试。（access_token error: {app.token_manager.last_error}）"
-                reply_xml = MessageHandler.build_reply(
-                    msg_type='text',
-                    content=error_msg,
-                    from_user=msg.get('ToUserName'),
-                    to_user=msg.get('FromUserName')
-                )
-                return reply_xml
+                reply_data = {
+                    'msg_type': 'text',
+                    'content': error_msg,
+                    'from_user': msg.get('ToUserName'),
+                    'to_user': msg.get('FromUserName')
+                }
+                if is_encrypted:
+                    reply_xml = MessageHandler.build_reply(**reply_data)
+                    encrypted_reply = crypto.encrypt_message(reply_xml, nonce)
+                    return encrypted_reply
+                else:
+                    return MessageHandler.build_reply(**reply_data)
 
             # 在调用外部服务前添加分发逻辑
             service_type = current_app.config['EXTERNAL_SERVICE_TYPE']
@@ -108,10 +101,25 @@ def init_routes(app):
                 openid=msg.get('FromUserName')
             )
 
-            # 无论是否有响应都先返回success
-            logger.info("Returning success immediately")
-            return 'success'
+            # 构建回复
+            reply_content = "这是测试回复"  # 替换为实际回复内容
+            reply_data = {
+                'msg_type': 'text',
+                'content': reply_content,
+                'from_user': msg.get('ToUserName'),
+                'to_user': msg.get('FromUserName')
+            }
+
+            # 根据加密模式返回不同格式
+            if is_encrypted:
+                reply_xml = MessageHandler.build_reply(**reply_data)
+                encrypted_reply = crypto.encrypt_message(reply_xml, nonce)
+                return encrypted_reply
+            else:
+                return MessageHandler.build_reply(**reply_data)
 
         except Exception as e:
-            logger.error(f"Error processing message: {str(e)}", exc_info=True)
-            return 'success' if isinstance(e, TimeoutError) else 'Internal Server Error', 500
+            logger.error(f"消息处理失败: {str(e)}")
+            if is_encrypted:
+                return 'success'  # 加密模式必须返回success
+            return 'System error', 500
