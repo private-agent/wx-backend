@@ -8,8 +8,12 @@ services:
     ports:
       - "5080:80"
     volumes:
-      - ./logs:/app/logs  # 挂载日志目录
-      - ./data:/app/data  # 新增数据卷映射
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - type: bind
+        source: ./logs
+        target: /app/logs
+        read_only: false
     environment:
       # WeChat配置
       - WECHAT_TOKEN=${WECHAT_TOKEN}
@@ -28,6 +32,7 @@ services:
       - TOKEN_FILE_PATH=/app/data/access_token.json  # 配置文件路径
     networks:
       - wx-network
+    user: root  # 临时使用root用户运行
 
 networks:
   wx-network:
