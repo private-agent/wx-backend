@@ -1,10 +1,8 @@
-import logging
-from flask import request, current_app, make_response
+from flask import request, current_app
 from app.wechat.crypto import WeChatCrypto
 from app.wechat.handler import MessageHandler
 from app.utils.logger import logger
 from app.wechat.external_service import ExternalServiceAdapter, default_request_mapper, default_response_mapper, AsyncResponseHandler, openai_request_mapper, openai_response_mapper, ollama_request_mapper, ollama_response_mapper, custom_request_mapper, custom_response_mapper
-from app.wechat.token_manager import TokenManager
 import time
 
 def init_routes(app):
@@ -19,7 +17,7 @@ def init_routes(app):
         appid=app.config['WECHAT_APPID'],
         appsecret=app.config['WECHAT_APPSECRET']
     )
-    external_adapter = ExternalServiceAdapter(async_handler)
+    external_adapter = ExternalServiceAdapter(async_handler, timeout=app.config['EXTERNAL_SERVICE_TIMEOUT'])
 
     @app.route('/wechat', methods=['GET', 'POST'])
     def wechat():
@@ -102,7 +100,7 @@ def init_routes(app):
             )
 
             # 构建回复
-            reply_content = "这是测试回复"  # 替换为实际回复内容
+            reply_content = "AI处理中..."  # 替换为实际回复内容
             reply_data = {
                 'msg_type': 'text',
                 'content': reply_content,

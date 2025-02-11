@@ -67,9 +67,9 @@ class AsyncResponseHandler:
         self.executor.submit(self._send_custom_message, openid, external_resp)
 
 class ExternalServiceAdapter:
-    def __init__(self, async_handler: AsyncResponseHandler):
+    def __init__(self, async_handler: AsyncResponseHandler, timeout: int = 5):
         self.executor = ThreadPoolExecutor(max_workers=10)
-        self.timeout = 5
+        self.timeout = timeout
         self.async_handler = async_handler
 
     def _send_request(self, url: str, payload: Dict) -> Optional[Dict]:
