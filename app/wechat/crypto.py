@@ -28,10 +28,10 @@ class WeChatCrypto:
             logger.warning(f'Invalid signature: expected={sha1}, received={signature}')
         return is_valid
 
-    def decrypt_message(self, encrypted_msg, msg_signature, timestamp, nonce):
+    def decrypt_message(self, encrypted_msg, signature, timestamp, nonce):
         """解密微信消息（新增签名验证）"""
         # 先验证消息签名
-        if not self.check_signature(msg_signature, timestamp, nonce):
+        if not self.check_signature(signature, timestamp, nonce):
             raise ValueError("Invalid message signature")
 
         try:

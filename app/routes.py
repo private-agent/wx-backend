@@ -32,7 +32,7 @@ def init_routes(app):
         # 验证签名逻辑
         if request.method == 'GET':
             echo_str = request.args.get('echostr', '')
-            if crypto.check_signature(signature, timestamp, nonce, echo_str):
+            if crypto.check_signature(signature, timestamp, nonce):
                 return echo_str
             return 'Verification failed', 403
 
@@ -49,7 +49,7 @@ def init_routes(app):
                 # 加密消息处理
                 decrypted_xml = crypto.decrypt_message(
                     xml_str,
-                    msg_signature,
+                    signature,
                     timestamp,
                     nonce
                 )
