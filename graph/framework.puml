@@ -1,0 +1,30 @@
+@startuml framework
+!pragma layout smetana
+
+skinparam backgroundColor #F5F5F5
+
+rectangle "微信服务器" as wechat_server
+rectangle "Flask 应用" as flask_app {
+    component "路由模块 (routes.py)" as routes
+    component "消息加解密 (crypto.py)" as crypto
+    component "消息处理 (handler.py)" as handler
+    component "日志系统 (logger.py)" as logger
+    database "配置文件 (config.py)" as config
+}
+
+rectangle "外部依赖" as deps {
+    component "Crypto" #lightblue
+    component "Flask" #lightblue
+    component "Logging" #lightblue
+}
+
+wechat_server --> routes : HTTP请求(GET/POST)
+routes --> crypto : 签名验证\n消息加解密
+routes --> handler : 消息解析\n回复构造
+routes --> logger : 记录日志
+config --> routes : 配置参数
+crypto --> Crypto : AES加解密
+routes --> Flask : 路由注册
+logger --> Logging : 日志记录
+
+@enduml

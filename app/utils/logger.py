@@ -111,7 +111,7 @@ def setup_logger(name='wx-backend'):
 
     # 配置文件处理器
     file_handler = RotatingFileHandler(
-        filename=os.path.join(log_dir, f'ars_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'),
+        filename=os.path.join(log_dir, f'wxb_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'),
         maxBytes=max_bytes,  # 使用解析后的最大字节数
         backupCount=backup_count,  # 从环境变量读取备份文件数量，默认为5
         encoding='utf-8'

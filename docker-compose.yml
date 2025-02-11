@@ -14,7 +14,11 @@ services:
       - WECHAT_TOKEN=${WECHAT_TOKEN}
       - WECHAT_AES_KEY=${WECHAT_AES_KEY}
       - WECHAT_APPID=${WECHAT_APPID}
-      
+      - WECHAT_APPSECRET=${WECHAT_APPSECRET}
+      - EXTERNAL_SERVICE_URL=${EXTERNAL_SERVICE_URL}
+      - EXTERNAL_SERVICE_TIMEOUT=${EXTERNAL_SERVICE_TIMEOUT}
+      - EXTERNAL_SERVICE_TYPE=${EXTERNAL_SERVICE_TYPE}
+
       # 日志配置
       - LOG_LEVEL=DEBUG  # 临时设置为DEBUG级别
       - LOG_DIR=/app/logs  # 容器内日志目录
@@ -25,4 +29,4 @@ services:
 
 networks:
   wx-network:
-    driver: bridge 
+    driver: bridge

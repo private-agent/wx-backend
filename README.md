@@ -10,10 +10,10 @@
 - [x] 基本的消息接收和回复
 - [x] 完整的日志系统（支持文件和控制台输出）
 - [x] Docker 容器化部署
+- [x] access_token 的获取和管理
 
 ### TODO
 - [ ] 消息推送功能
-- [ ] access_token 的获取和管理
 - [ ] 智能体接入
 - [ ] 更多类型的消息处理（图片、语音等）
 - [ ] 自定义菜单
@@ -29,6 +29,7 @@
 WECHAT_TOKEN=your_token
 WECHAT_AES_KEY=your_encoding_aes_key
 WECHAT_APPID=your_appid
+WECHAT_APPSECRET=your_appsecret
 
 # 日志配置
 LOG_LEVEL=INFO
@@ -75,6 +76,8 @@ wx-backend/
 - `WECHAT_TOKEN`: 用于验证消息真实性
 - `WECHAT_AES_KEY`: 消息加解密密钥
 - `WECHAT_APPID`: 公众号的 AppID
+- `WECHAT_APPSECRET`: 公众号的 AppSecret
+- `EXTERNAL_SERVICE_TYPE`: 外部服务类型（default/openai/ollama/custom）
 
 ### 日志配置
 - `LOG_LEVEL`: 日志级别（DEBUG/INFO/WARNING/ERROR）
