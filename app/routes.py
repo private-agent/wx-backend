@@ -13,20 +13,9 @@ def init_routes(app):
         app.config['WECHAT_AES_KEY'],
         app.config['WECHAT_APPID']
     )
-    token_manager = TokenManager(app.config['TOKEN_FILE_PATH'])
-
-    # 启动时获取token（仅在需要时刷新）
-    if not token_manager.access_token or token_manager.expires_at < time.time():
-        logger.info("未检测到有效token，开始主动刷新...")
-        initial_token = token_manager.refresh_token(
-            app.config['WECHAT_APPID'],
-            app.config['WECHAT_APPSECRET']
-        )
-    else:
-        logger.info(f"使用已存在的有效token，有效期至{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(token_manager.expires_at))}")
 
     async_handler = AsyncResponseHandler(
-        token_manager,
+        app.token_manager,
         appid=app.config['WECHAT_APPID'],
         appsecret=app.config['WECHAT_APPSECRET']
     )
@@ -83,8 +72,8 @@ def init_routes(app):
             logger.info(f'Parsed message: type={msg.get("MsgType")}, from={msg.get("FromUserName")}')
 
             # 检查access_token状态
-            if not token_manager.access_token:
-                error_msg = f"系统服务暂时不可用，请稍后再试。（access_token error: {token_manager.last_error}）"
+            if not app.token_manager.access_token:
+                error_msg = f"系统服务暂时不可用，请稍后再试。（access_token error: {app.token_manager.last_error}）"
                 reply_xml = MessageHandler.build_reply(
                     msg_type='text',
                     content=error_msg,
