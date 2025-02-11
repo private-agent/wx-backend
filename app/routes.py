@@ -79,7 +79,7 @@ def init_routes(app):
 
             # 检查access_token状态
             if not token_manager.access_token:
-                error_msg = "系统服务暂时不可用，请稍后再试"
+                error_msg = f"系统服务暂时不可用，请稍后再试。（access_token error: {token_manager.last_error}）"
                 reply_xml = MessageHandler.build_reply(
                     msg_type='text',
                     content=error_msg,

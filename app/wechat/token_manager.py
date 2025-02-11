@@ -57,19 +57,19 @@ class TokenManager:
 
                     if errcode == -1:  # 系统繁忙
                         wait = 2 ** attempt
-                        logger.warning(f"系统繁忙，{wait}秒后重试。错误信息: {errmsg}")
+                        logger.warning(f"系统繁忙，{wait}秒后重试。错误信息: {errcode} {errmsg}")
                         time.sleep(wait)
                         continue
 
                     if errcode == 40164:  # IP白名单错误
-                        logger.error(f"IP未在白名单中，请登录微信公众平台配置。错误信息: {errmsg}")
+                        logger.error(f"IP未在白名单中，请登录微信公众平台配置。错误信息: {errcode} {errmsg}")
                         break
 
                     if errcode == 89503:  # 需要管理员确认
-                        logger.critical("需要管理员在微信公众平台确认此IP的调用权限")
+                        logger.critical(f"{errcode} 需要管理员在微信公众平台确认此IP的调用权限")
                         break
 
-                    logger.error(f"获取access_token失败: {errmsg}")
+                    logger.error(f"获取access_token失败: {errcode} {errmsg}")
                     break
 
                 except requests.exceptions.RequestException as e:
