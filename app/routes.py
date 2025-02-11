@@ -5,6 +5,8 @@ from app.utils.logger import logger
 from app.wechat.external_service import ExternalServiceAdapter, default_request_mapper, default_response_mapper, AsyncResponseHandler, openai_request_mapper, openai_response_mapper, ollama_request_mapper, ollama_response_mapper, custom_request_mapper, custom_response_mapper
 import time
 import xml.etree.ElementTree as ET
+import random
+import string
 
 def init_routes(app):
     crypto = WeChatCrypto(
@@ -124,7 +126,20 @@ def init_routes(app):
             if is_encrypted:
                 reply_xml = MessageHandler.build_reply(**reply_data)
                 encrypted_reply = crypto.encrypt_message(reply_xml, nonce)
-                return encrypted_reply
+                # 生成新的消息签名
+                timestamp = str(int(time.time()))
+                new_nonce = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+                msg_signature = crypto.generate_signature(encrypted_reply, timestamp, new_nonce)
+                # 构建符合微信要求的加密消息结构
+                encrypted_xml = f"""
+                <xml>
+                    <Encrypt><![CDATA[{encrypted_reply}]]></Encrypt>
+                    <MsgSignature><![CDATA[{msg_signature}]]></MsgSignature>
+                    <TimeStamp>{timestamp}</TimeStamp>
+                    <Nonce><![CDATA[{new_nonce}]]></Nonce>
+                </xml>
+                """
+                return encrypted_xml.strip()
             else:
                 return MessageHandler.build_reply(**reply_data)
 

@@ -37,9 +37,6 @@ class AsyncResponseHandler:
             "text": {"content": content}
         }
 
-        # 记录实际发送的内容而不是repr
-        logger.debug(f"Built message payload for {openid}: {json.dumps(payload, ensure_ascii=False, indent=2)}")
-
         return payload
 
     def _send_custom_message(self, openid: str, payload: Dict, max_retries: int = 3):
