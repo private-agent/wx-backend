@@ -4,6 +4,7 @@ from app.wechat.handler import MessageHandler
 from app.utils.logger import logger
 from app.wechat.external_service import ExternalServiceAdapter, default_request_mapper, default_response_mapper, AsyncResponseHandler, openai_request_mapper, openai_response_mapper, ollama_request_mapper, ollama_response_mapper, custom_request_mapper, custom_response_mapper
 import time
+import xml.etree.ElementTree as ET
 
 def init_routes(app):
     crypto = WeChatCrypto(
@@ -116,8 +117,9 @@ def init_routes(app):
             else:
                 return MessageHandler.build_reply(**reply_data)
 
-        except Exception as e:
-            logger.error(f"消息处理失败: {str(e)}")
-            if is_encrypted:
-                return 'success'  # 加密模式必须返回success
-            return 'System error', 500
+        except ValueError as e:
+            logger.error(f"签名验证失败: {str(e)}")
+            return 'Invalid signature', 403
+        except ET.ParseError as e:
+            logger.error(f"XML解析错误: {str(e)}")
+            return 'XML parse error', 400

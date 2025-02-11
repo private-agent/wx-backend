@@ -5,7 +5,6 @@ from app.utils.logger import logger
 import os
 import json
 from flask import current_app
-from typing import Dict
 
 class TokenManager:
     _instance = None
@@ -137,27 +136,3 @@ class TokenManager:
             if self.retry_count >= self.max_retries:
                 logger.critical("连续获取access_token失败，停止重试")
             return None
-
-    def _send_custom_message(self, openid: str, payload: Dict):
-        """实际发送客服消息"""
-        try:
-            # 增加token有效性检查
-            if not self.access_token:
-                self.refresh_token(self.appid, self.appsecret)
-
-            access_token = self.access_token
-            if not access_token:
-                logger.error("无法获取有效的access_token")
-                return
-
-            url = f"https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token={access_token}"
-            response = requests.post(url, json=payload, timeout=5)
-            response.raise_for_status()
-
-            result = response.json()
-            if result.get("errcode") == 48001:
-                logger.critical("客服消息权限未开通，请登录微信公众平台开通权限")
-            elif result.get("errcode") != 0:
-                logger.error(f"发送客服消息失败: {result}")
-        except Exception as e:
-            logger.error(f"发送客服消息时出错: {str(e)}")

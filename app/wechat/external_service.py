@@ -49,6 +49,7 @@ class AsyncResponseHandler:
 
     def send_async_response(self, openid: str, external_resp: Dict):
         """异步发送客服消息"""
+        logger.debug(f"Sending customer service message to {openid}: \n{json.dumps(external_resp, indent=2)}")
         self.executor.submit(self._send_custom_message, openid, external_resp)
 
 class ExternalServiceAdapter:
