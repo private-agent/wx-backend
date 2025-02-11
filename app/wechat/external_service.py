@@ -62,9 +62,7 @@ class AsyncResponseHandler:
                             logger.warning(f"Content decode failed in send: {str(e)}")
 
                 url = f"https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token={access_token}"
-                logger.debug(f"Sending payload: {json.dumps(payload, ensure_ascii=False)}")
-                logger.debug(f"Sending payload: {payload['text']['content']}")
-                response = requests.post(url, json=payload, timeout=5)
+                response = requests.post(url, data=json.dumps(payload, ensure_ascii=False).encode('utf-8'), timeout=5)
                 response.raise_for_status()
 
                 result = response.json()
