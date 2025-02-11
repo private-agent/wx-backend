@@ -8,3 +8,4 @@ class Config:
     EXTERNAL_SERVICE_URL = os.getenv('EXTERNAL_SERVICE_URL', 'http://default-service/api/wechat')
     EXTERNAL_SERVICE_TIMEOUT = int(os.getenv('EXTERNAL_SERVICE_TIMEOUT', 5))
     EXTERNAL_SERVICE_TYPE = os.getenv('EXTERNAL_SERVICE_TYPE', 'default').lower()
+    TOKEN_FILE_PATH = os.getenv('TOKEN_FILE_PATH', '/app/data/access_token.json')
