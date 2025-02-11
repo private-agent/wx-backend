@@ -17,14 +17,14 @@ class TokenManager:
                     cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self, token_file_path: str):
         self.access_token = None
         self.expires_at = 0
         self.last_error = None
         self.retry_count = 0
         self.max_retries = 3
         self.lock = Lock()
-        self.token_file = current_app.config['TOKEN_FILE_PATH']  # 从配置读取路径
+        self.token_file = token_file_path  # 通过参数传入路径
         self._load_from_file()
 
     def _load_from_file(self):

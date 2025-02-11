@@ -13,9 +13,7 @@ def init_routes(app):
         app.config['WECHAT_AES_KEY'],
         app.config['WECHAT_APPID']
     )
-    token_manager = TokenManager()  # 新增token管理器
-    token_manager.token_file = app.config['TOKEN_FILE_PATH']
-    token_manager._load_from_file()  # 重新加载配置后的路径
+    token_manager = TokenManager(app.config['TOKEN_FILE_PATH'])  # 新初始化方式
 
     # 启动时获取token（仅在需要时刷新）
     if not token_manager.access_token or token_manager.expires_at < time.time():
