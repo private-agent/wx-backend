@@ -1,0 +1,57 @@
+@startuml framework
+!pragma layout smetana
+
+skinparam backgroundColor #F5F5F5
+skinparam component {
+    BackgroundColor white
+    BorderColor #2C3E50
+    ArrowColor #34495E
+}
+
+' 定义主要组件
+rectangle "微信服务器" as wechat_server #E8F8F5
+rectangle "Flask 应用" as flask_app {
+    component "路由控制器\n(routes.py)" as routes
+    component "消息加解密\n(crypto.py)" as crypto
+    component "消息处理器\n(handler.py)" as handler
+    component "Token管理器\n(token_manager.py)" as token_manager
+    component "服务适配器\n(external_service.py)" as external_service
+    component "日志系统\n(logger.py)" as logger
+    database "配置模块\n(config.py)" as config
+}
+
+' 外部服务和依赖
+rectangle "外部服务" as external {
+    component "OpenAI API" #AED6F1
+    component "Ollama" #AED6F1
+    component "自定义服务" #AED6F1
+}
+
+rectangle "系统依赖" as deps {
+    component "Crypto" #D5F5E3
+    component "Flask" #D5F5E3
+    component "Requests" #D5F5E3
+    component "Logging" #D5F5E3
+}
+
+' 定义连接关系
+wechat_server --> routes : HTTP请求\n(GET/POST)
+routes --> crypto : 1. 签名验证\n2. 消息加解密
+routes --> handler : 3. 消息解析
+handler --> external_service : 4. 服务分发
+external_service --> token_manager : 获取Token
+external_service --> external : 5. 调用服务
+external_service ..> logger : 记录日志
+
+' 配置依赖
+config --> routes : 配置参数
+config --> token_manager : Token配置
+config --> external_service : 服务配置
+
+' 系统依赖
+crypto --> Crypto : 加解密支持
+routes --> Flask : Web框架
+external_service --> Requests : HTTP客户端
+logger --> Logging : 日志记录
+
+@enduml
