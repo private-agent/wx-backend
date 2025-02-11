@@ -46,9 +46,20 @@ def init_routes(app):
             # 判断消息模式
             is_encrypted = 'encrypt_type' in request.args or 'aes' in request.args.values()
             if is_encrypted:
+                # 先解析XML获取Encrypt字段
+                try:
+                    xml_tree = ET.fromstring(xml_str)
+                    encrypt_node = xml_tree.find('Encrypt')
+                    if encrypt_node is None:
+                        raise ValueError("No Encrypt field in XML")
+                    encrypted_msg = encrypt_node.text
+                except ET.ParseError as e:
+                    logger.error(f"Failed to parse XML: {str(e)}")
+                    return 'Invalid XML', 400
+
                 # 加密消息处理
                 decrypted_xml = crypto.decrypt_message(
-                    xml_str,
+                    encrypted_msg,  # 传入Encrypt字段的内容
                     signature,
                     timestamp,
                     nonce

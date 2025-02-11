@@ -36,11 +36,16 @@ class WeChatCrypto:
 
         try:
             # 确保输入是字符串
-            if not isinstance(encrypted_msg, str):
+            if isinstance(encrypted_msg, bytes):
+                encrypted_msg = encrypted_msg.decode('utf-8')
+            elif not isinstance(encrypted_msg, str):
                 logger.error(f'Invalid input type: {type(encrypted_msg)}')
                 raise ValueError('Encrypted message must be a string')
 
-            logger.debug(f'Original encrypted message: {encrypted_msg}')
+            # 移除CDATA包装（如果存在）
+            encrypted_msg = encrypted_msg.replace('<![CDATA[', '').replace(']]>', '')
+
+            logger.debug(f'Encrypted message after preprocessing: {encrypted_msg}')
 
             # 处理base64填充
             pad_length = len(encrypted_msg) % 4
