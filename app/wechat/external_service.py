@@ -22,14 +22,23 @@ class AsyncResponseHandler:
         if not content.strip():
             content = "未收到有效回复"
 
-        # 确保content是解码后的Unicode字符串
+        # 统一处理所有字符串类型的content
         if isinstance(content, str):
             try:
-                # 如果是Unicode转义序列,进行解码
-                if content.startswith('\\u') or '\\u' in content:
-                    content = content.encode('utf-8').decode('unicode-escape')
+                # 先尝试解码unicode转义字符（兼容多层转义的情况）
+                while True:
+                    decoded = bytes(content, "utf-8").decode("unicode_escape")
+                    if decoded == content:  # 没有更多可解码的转义字符
+                        break
+                    content = decoded
+                    logger.debug(f"Decoded content: {content}")
+
+                # 最后确保UTF-8编码
+                content = content.encode('utf-8').decode('utf-8')
+
             except Exception as e:
-                logger.warning(f"Content decode failed: {str(e)}")
+                logger.warning(f"Content解码失败: {str(e)}")
+                content = "消息解析错误"  # 提供默认回复
 
         return {
             "touser": openid,
@@ -180,21 +189,23 @@ def openai_request_mapper(wechat_msg: Dict) -> Dict:
 def openai_response_mapper(external_resp: Dict) -> Dict:
     """将OpenAI响应转换为微信回复格式"""
     try:
+        # 直接获取原始内容，避免二次编码
+        raw_content = external_resp['choices'][0]['message']['content']
         return {
             "msg_type": "text",
-            "content": external_resp['choices'][0]['message']['content']
+            "content": raw_content  # 保持原始内容，不进行编码
         }
     except KeyError as e:
         logger.error(f"OpenAI响应格式错误，缺少关键字段: {str(e)}")
         return {
             "msg_type": "text",
-            "content": "OpenAI 响应错误，请联系管理员"
+            "content": f"OpenAI 响应错误，请联系管理员。{str(e)}"
         }
     except Exception as e:
         logger.error(f"OpenAI response mapping failed: {str(e)}")
         return {
             "msg_type": "text",
-            "content": "OpenAI 响应错误，请联系管理员"
+            "content": f"OpenAI 响应错误，请联系管理员。{str(e)}"
         }
 
 def ollama_request_mapper(wechat_msg: Dict) -> Dict:
@@ -216,7 +227,7 @@ def ollama_response_mapper(external_resp: Dict) -> Dict:
         logger.error(f"Ollama response mapping failed: {str(e)}")
         return {
             "msg_type": "text",
-            "content": "Ollama 服务响应异常"
+            "content": f"Ollama 服务响应异常。{str(e)}"
         }
 
 def custom_request_mapper(wechat_msg: Dict) -> Dict:
