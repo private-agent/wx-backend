@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any, Callable
 from app.utils.logger import logger
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from app.wechat.token_manager import TokenManager
+import time
 
 class AsyncResponseHandler:
     def __init__(self, token_manager: TokenManager, appid: str, appsecret: str):
@@ -21,36 +22,68 @@ class AsyncResponseHandler:
         if not content.strip():
             content = "未收到有效回复"
 
+        # 确保content是解码后的Unicode字符串
+        if isinstance(content, str):
+            try:
+                # 如果是Unicode转义序列,进行解码
+                if content.startswith('\\u') or '\\u' in content:
+                    content = content.encode('utf-8').decode('unicode-escape')
+            except Exception as e:
+                logger.warning(f"Content decode failed: {str(e)}")
+
         return {
             "touser": openid,
             "msgtype": msg_type,
             "text": {"content": content}
         }
 
-    def _send_custom_message(self, openid: str, payload: Dict):
+    def _send_custom_message(self, openid: str, payload: Dict, max_retries: int = 3):
         """实际发送客服消息"""
-        try:
-            access_token = self.token_manager.get_token(self.appid, self.appsecret)
+        for attempt in range(max_retries):
+            try:
+                access_token = self.token_manager.get_token(self.appid, self.appsecret)
+                if not access_token:
+                    logger.error("Failed to get access token for customer service message")
+                    return
 
-            if not access_token:
-                logger.error("Failed to get access token for customer service message")
-                return
+                url = f"https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token={access_token}"
+                response = requests.post(url, json=payload, timeout=5)
+                response.raise_for_status()
 
-            url = f"https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token={access_token}"
-            response = requests.post(url, json=payload, timeout=5)
-            response.raise_for_status()
+                result = response.json()
+                if result.get("errcode") == 0:
+                    return True
 
-            result = response.json()
-            if result.get("errcode") != 0:
+                if attempt < max_retries - 1:  # 非最后一次重试
+                    logger.warning(f"重试发送客服消息 (尝试 {attempt + 1}/{max_retries})")
+                    time.sleep(2 ** attempt)  # 指数退避
+                    continue
+
                 logger.error(f"Failed to send customer service message: {result}")
 
-        except Exception as e:
-            logger.error(f"Error sending customer service message: {str(e)}")
+            except Exception as e:
+                if attempt < max_retries - 1:  # 非最后一次重试
+                    logger.warning(f"重试发送客服消息 (尝试 {attempt + 1}/{max_retries})")
+                    time.sleep(2 ** attempt)  # 指数退避
+                    continue
+                logger.error(f"Error sending customer service message: {str(e)}")
 
     def send_async_response(self, openid: str, external_resp: Dict):
         """异步发送客服消息"""
         logger.debug(f"Sending customer service message to {openid}: \n{json.dumps(external_resp, indent=2)}")
-        self.executor.submit(self._send_custom_message, openid, external_resp)
+        future = self.executor.submit(self._send_custom_message, openid, external_resp)
+
+        def _callback(future):
+            try:
+                result = future.result()
+                if result:
+                    logger.info(f"Successfully sent message to {openid}")
+                else:
+                    logger.error(f"Failed to send message to {openid}")
+            except Exception as e:
+                logger.error(f"Message sending callback error: {str(e)}")
+
+        future.add_done_callback(_callback)
 
 class ExternalServiceAdapter:
     def __init__(self, async_handler: AsyncResponseHandler, timeout: int = 5):
