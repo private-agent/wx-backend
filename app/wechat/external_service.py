@@ -51,7 +51,18 @@ class AsyncResponseHandler:
                     logger.error("Failed to get access token for customer service message")
                     return
 
+                # 确保消息内容已解码
+                if isinstance(payload.get('text', {}).get('content'), str):
+                    content = payload['text']['content']
+                    if '\\u' in content:
+                        try:
+                            decoded_content = bytes(content, 'utf-8').decode('unicode_escape')
+                            payload['text']['content'] = decoded_content
+                        except Exception as e:
+                            logger.warning(f"Content decode failed in send: {str(e)}")
+
                 url = f"https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token={access_token}"
+                logger.debug(f"Sending payload: {json.dumps(payload, ensure_ascii=False)}")
                 response = requests.post(url, json=payload, timeout=5)
                 response.raise_for_status()
 
@@ -116,7 +127,7 @@ class ExternalServiceAdapter:
     ) -> Optional[Dict]:
         try:
             request_payload = request_mapper(wechat_msg)
-            logger.debug(f"External request payload: {json.dumps(request_payload, indent=2)}")
+            logger.debug(f"External request payload: {json.dumps(request_payload, ensure_ascii=False, indent=2)}")
 
             future = self.executor.submit(self._send_request, endpoint, request_payload)
 
