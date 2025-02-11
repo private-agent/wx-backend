@@ -13,34 +13,19 @@ class AsyncResponseHandler:
         self.executor = ThreadPoolExecutor(max_workers=20)
 
     def _build_message_payload(self, external_resp: Dict, openid: str) -> Optional[Dict]:
-        """构建客服消息数据结构"""
+        """增加默认消息处理"""
         msg_type = external_resp.get("msg_type", "text")
-        payload = {
+        content = external_resp.get("content", "")
+
+        # 空内容处理
+        if not content.strip():
+            content = "未收到有效回复"
+
+        return {
             "touser": openid,
-            "msgtype": msg_type
+            "msgtype": msg_type,
+            "text": {"content": content}
         }
-
-        # 根据不同类型构建消息内容
-        if msg_type == "text":
-            payload["text"] = {"content": external_resp.get("content", "")}
-        elif msg_type == "image":
-            payload["image"] = {"media_id": external_resp.get("media_id")}
-        elif msg_type == "voice":
-            payload["voice"] = {"media_id": external_resp.get("media_id")}
-        elif msg_type == "video":
-            payload["video"] = {
-                "media_id": external_resp.get("media_id"),
-                "thumb_media_id": external_resp.get("thumb_media_id"),
-                "title": external_resp.get("title", ""),
-                "description": external_resp.get("description", "")
-            }
-        elif msg_type == "news":
-            payload["news"] = {"articles": external_resp.get("articles", [])}
-        else:
-            logger.warning(f"Unsupported message type: {msg_type}")
-            return None
-
-        return payload
 
     def _send_custom_message(self, openid: str, payload: Dict):
         """实际发送客服消息"""
@@ -109,14 +94,29 @@ class ExternalServiceAdapter:
             if result:
                 mapped_response = response_mapper(result)
                 if mapped_response:
-                    # 构建客服消息payload
                     payload = self.async_handler._build_message_payload(mapped_response, openid)
                     if payload:
                         self.async_handler.send_async_response(openid, payload)
         except TimeoutError:
-            logger.warning("External service timeout, async response cancelled")
+            logger.warning("External service timeout, sending notification")
+            # 构建超时提示消息
+            timeout_msg = {
+                "msg_type": "text",
+                "content": "请求处理超时，请稍后再试"
+            }
+            payload = self.async_handler._build_message_payload(timeout_msg, openid)
+            if payload:
+                self.async_handler.send_async_response(openid, payload)
         except Exception as e:
             logger.error(f"Async response handling failed: {str(e)}")
+            # 发送通用错误提示
+            error_msg = {
+                "msg_type": "text",
+                "content": "服务暂时不可用，请稍后重试"
+            }
+            payload = self.async_handler._build_message_payload(error_msg, openid)
+            if payload:
+                self.async_handler.send_async_response(openid, payload)
 
 # 默认请求/响应映射器示例
 def default_request_mapper(wechat_msg: Dict) -> Dict:
