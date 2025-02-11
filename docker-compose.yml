@@ -9,6 +9,7 @@ services:
       - "5080:80"
     volumes:
       - ./logs:/app/logs  # 挂载日志目录
+      - ./data:/app/data  # 新增数据卷映射
     environment:
       # WeChat配置
       - WECHAT_TOKEN=${WECHAT_TOKEN}
@@ -24,6 +25,7 @@ services:
       - LOG_DIR=/app/logs  # 容器内日志目录
       - LOG_FILE_SIZE=${LOG_FILE_SIZE:-50M}  # 单个日志文件大小限制
       - LOG_BACKUP_COUNT=${LOG_BACKUP_COUNT:-5}  # 日志文件备份数量
+      - TOKEN_FILE_PATH=/app/data/access_token.json  # 配置文件路径
     networks:
       - wx-network
 

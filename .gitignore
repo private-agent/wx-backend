@@ -2,3 +2,4 @@ app/config.py
 logs/
 *.log
 .env
+data/*.json

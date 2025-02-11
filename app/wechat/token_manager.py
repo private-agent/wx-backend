@@ -2,6 +2,9 @@ import time
 import requests
 from threading import Lock
 from app.utils.logger import logger
+import os
+import json
+from flask import current_app
 
 class TokenManager:
     _instance = None
@@ -21,6 +24,51 @@ class TokenManager:
         self.retry_count = 0
         self.max_retries = 3
         self.lock = Lock()
+        self.token_file = current_app.config['TOKEN_FILE_PATH']  # 从配置读取路径
+        self._load_from_file()
+
+    def _load_from_file(self):
+        """从文件加载token"""
+        try:
+            if os.path.exists(self.token_file):
+                with open(self.token_file, 'r') as f:
+                    data = json.load(f)
+
+                    # 验证配置一致性
+                    current_appid = current_app.config['WECHAT_APPID']
+                    current_appsecret = current_app.config['WECHAT_APPSECRET']
+
+                    # 检查appid和appsecret是否匹配（前3位验证）
+                    file_appsecret_prefix = data.get('appsecret', '')[:3]
+                    current_appsecret_prefix = current_appsecret[:3]
+
+                    if (data.get('appid') != current_appid or
+                        file_appsecret_prefix != current_appsecret_prefix):
+                        logger.warning("配置信息变更，已存储的access_token失效")
+                        return
+
+                    # 检查有效期
+                    if data['expires_at'] > time.time() + 300:
+                        self.access_token = data['access_token']
+                        self.expires_at = data['expires_at']
+                        logger.info(f"从文件加载有效access_token，有效期至{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.expires_at))}")
+
+        except Exception as e:
+            logger.warning(f"加载token文件失败: {str(e)}")
+
+    def _save_to_file(self):
+        """保存token到文件"""
+        try:
+            os.makedirs(os.path.dirname(self.token_file), exist_ok=True)
+            with open(self.token_file, 'w') as f:
+                json.dump({
+                    "access_token": self.access_token,
+                    "expires_at": self.expires_at,
+                    "appid": self.appid,
+                    "appsecret": self.appsecret[:3] + "***"  # 安全记录
+                }, f, indent=2)
+        except Exception as e:
+            logger.error(f"保存token文件失败: {str(e)}")
 
     def get_token(self, appid, appsecret):
         """获取当前有效的access_token"""
@@ -46,6 +94,9 @@ class TokenManager:
                     if 'access_token' in data:
                         self.access_token = data['access_token']
                         self.expires_at = time.time() + data['expires_in']
+                        self.appid = appid
+                        self.appsecret = appsecret
+                        self._save_to_file()
                         self.retry_count = 0
                         logger.info(f"Access token刷新成功，有效期至{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.expires_at))}")
                         return self.access_token

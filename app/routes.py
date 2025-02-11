@@ -5,6 +5,7 @@ from app.wechat.handler import MessageHandler
 from app.utils.logger import logger
 from app.wechat.external_service import ExternalServiceAdapter, default_request_mapper, default_response_mapper, AsyncResponseHandler, openai_request_mapper, openai_response_mapper, ollama_request_mapper, ollama_response_mapper, custom_request_mapper, custom_response_mapper
 from app.wechat.token_manager import TokenManager
+import time
 
 def init_routes(app):
     crypto = WeChatCrypto(
@@ -13,12 +14,18 @@ def init_routes(app):
         app.config['WECHAT_APPID']
     )
     token_manager = TokenManager()  # 新增token管理器
+    token_manager.token_file = app.config['TOKEN_FILE_PATH']
+    token_manager._load_from_file()  # 重新加载配置后的路径
 
-    # 启动时立即获取token
-    initial_token = token_manager.refresh_token(
-        app.config['WECHAT_APPID'],
-        app.config['WECHAT_APPSECRET']
-    )
+    # 启动时获取token（仅在需要时刷新）
+    if not token_manager.access_token or token_manager.expires_at < time.time():
+        logger.info("未检测到有效token，开始主动刷新...")
+        initial_token = token_manager.refresh_token(
+            app.config['WECHAT_APPID'],
+            app.config['WECHAT_APPSECRET']
+        )
+    else:
+        logger.info(f"使用已存在的有效token，有效期至{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(token_manager.expires_at))}")
 
     async_handler = AsyncResponseHandler(
         token_manager,
