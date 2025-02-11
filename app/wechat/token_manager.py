@@ -10,14 +10,17 @@ class TokenManager:
     _instance = None
     _lock = Lock()
 
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):
         if not cls._instance:
             with cls._lock:
                 if not cls._instance:
                     cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, token_file_path: str):
+    def __init__(self, token_file_path: str = None):
+        if hasattr(self, '_initialized'):  # 防止重复初始化
+            return
+
         self.access_token = None
         self.expires_at = 0
         self.last_error = None
@@ -26,6 +29,7 @@ class TokenManager:
         self.lock = Lock()
         self.token_file = token_file_path  # 通过参数传入路径
         self._load_from_file()
+        self._initialized = True  # 标记已初始化
 
     def _load_from_file(self):
         """从文件加载token"""
