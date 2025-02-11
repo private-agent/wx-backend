@@ -19,6 +19,8 @@ def create_app():
                 app.config['WECHAT_APPID'],
                 app.config['WECHAT_APPSECRET']
             )
+        # 将token_manager附加到app对象
+        app.token_manager = token_manager
 
     init_routes(app)
     return app
