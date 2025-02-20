@@ -104,9 +104,13 @@ class ExternalServiceAdapter:
         self.timeout = timeout
         self.async_handler = async_handler
 
-    def _send_request(self, url: str, payload: Dict) -> Optional[Dict]:
+    def _send_request(self, url: str, payload: Dict, openid: str) -> Optional[Dict]:
         try:
-            response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'}, timeout=self.timeout)
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + openid  # 添加微信用户ID到请求头
+            }
+            response = requests.post(url, json=payload, headers=headers, timeout=self.timeout)
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -125,7 +129,8 @@ class ExternalServiceAdapter:
             request_payload = request_mapper(wechat_msg)
             logger.debug(f"External request payload: {json.dumps(request_payload, ensure_ascii=False, indent=2)}")
 
-            future = self.executor.submit(self._send_request, endpoint, request_payload)
+            # 添加openid参数到请求
+            future = self.executor.submit(self._send_request, endpoint, request_payload, openid)
 
             # 先立即返回success，后续异步处理
             self.executor.submit(self._handle_async_response, future, response_mapper, openid)
